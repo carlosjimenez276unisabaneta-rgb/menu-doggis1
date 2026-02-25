@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doggi's Hot Food - Menú Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-neutral-50 text-slate-900 pb-32">
+
+    <div id="root"></div>
+
+    <!-- Scripts de React y Lucide -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // Icon Helper Component
+        const Icon = ({ name, size = 20, className = "" }) => {
+            return <i data-lucide={name} className={`${className}`} style={{ width: size, height: size }}></i>;
+        };
+
+        const EXTRAS_DATA = [
+            { id: "o1", name: "Butifarras", price: 1000 },
+            { id: "o2", name: "Queso Fundido", price: 2500 },
+            { id: "o3", name: "Queso Lámina", price: 1500 },
+            { id: "o4", name: "Tocineta", price: 2000 },
+            { id: "o5", name: "Puerro Crocante", price: 3000 },
+            { id: "o6", name: "Salsa Doggi's", price: 3500 }
+        ];
+
+        const MENU_DATA = [
+            {
+                category: "Perritos",
+                items: [
+                    { id: "p1", name: "Doggi's Sencillo", price: 4000, description: "Pan, salchicha, ensalada de repollo, cebolla y ripio." },
+                    { id: "p2", name: "Doggi's Quesudo", price: 6500, description: "Pan, queso, salchicha, ensalada de repollo, cebolla y ripio." },
+                    { id: "p3", name: "Chipotle", price: 9000, description: "Pan, salchicha, ensalada de repollo, guacamole y puerro caramelizado." },
+                    { id: "p4", name: "Hawaiano", price: 9000, description: "Pan, salchicha, ensalada de repollo, cebolla, queso, tocineta y trozos de piña calada." },
+                    { id: "p5", name: "Doggi's Perra", price: 9000, description: "Pan, tocineta, ensalada de repollo, cebolla y ripio." }
+                ]
+            },
+            {
+                category: "Hamburguesas",
+                items: [
+                    { id: "h1", name: "Doggi's Burguer", price: 9000, description: "Pan, queso, carne, ensalada de repollo, cebolla, ripio y tocineta." },
+                    { id: "h2", name: "Arepa Burguer", price: 6500, description: "Arepa, queso, carne, ensalada de repollo, cebolla, ripio y tocineta." }
+                ]
+            },
+            {
+                category: "Chips",
+                items: [
+                    { id: "cp1", name: "Bowl de Papas", price: 13000, description: "Papas chips, tocineta, cebolla, salsa Doggi's + salsas a elección." },
+                    { id: "cp2", name: "Papas Chips", price: 3700, description: "Porción individual de nuestras crujientes papas chips." },
+                    { id: "cp3", name: "Platanitos", price: 3700, description: "Porción de platanitos crocantes." }
+                ]
+            },
+            {
+                category: "Chorizo",
+                items: [
+                    { id: "c1", name: "Choripan", price: 7000, description: "Pan, chorizo artesanal, ensalada de repollo, cebolla y ripio." },
+                    { id: "c2", name: "Chorizo Solo", price: 3500, description: "Chorizo artesanal de la casa." },
+                    { id: "c3", name: "Chorizo con Arepa y Queso (S)", price: 7000, description: "Tamaño sencillo." },
+                    { id: "c4", name: "Chorizo con Arepa y Queso (XL)", price: 12000, description: "Tamaño extra grande." }
+                ]
+            },
+            {
+                category: "Otros",
+                items: EXTRAS_DATA.map(e => ({ ...e, description: "Adición especial para tu pedido." }))
+            },
+            {
+                category: "Bebidas",
+                items: [
+                    { id: "b1", name: "Agua Saborizada", price: 1700 },
+                    { id: "b2", name: "Coca-Cola 250 ML", price: 2500 },
+                    { id: "b3", name: "Coca-Cola 1L", price: 5500 },
+                    { id: "b4", name: "Coca-Cola 1.5L", price: 7000 },
+                    { id: "b5", name: "Cerveza en Lata", price: 3500 }
+                ]
+            }
+        ];
+
+        const LOGO_URL = "https://files.oaiusercontent.com/file-K98Wp26mK6uS5G7VpS8W2C?se=2025-02-25T00%3A01%3A24Z&sp=r&sv=24.12&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D088298c9-7594-44d9-99ba-fca678d8cc97.jfif&sig=C0Y37EaAnR89X0wR68R87H27X06%3D";
+
+        function App() {
+            const [cart, setCart] = useState([]);
+            const [isCartOpen, setIsCartOpen] = useState(false);
+            const [activeCategory, setActiveCategory] = useState(MENU_DATA[0].category);
+            const [customizingItem, setCustomizingItem] = useState(null);
+            const [selectedExtras, setSelectedExtras] = useState([]);
+            const [specialNote, setSpecialNote] = useState("");
+
+            const WHATSAPP_NUMBER = "573104217114";
+
+            useEffect(() => {
+                lucide.createIcons();
+            }, [activeCategory, isCartOpen, customizingItem]);
+
+            const handleOpenCustomizer = (item, categoryName) => {
+                if (categoryName === "Bebidas" || categoryName === "Otros") {
+                    addToCart(item, [], "");
+                } else {
+                    setCustomizingItem(item);
+                    setSelectedExtras([]);
+                    setSpecialNote("");
+                }
+            };
+
+            const toggleExtra = (extra) => {
+                setSelectedExtras(prev => 
+                    prev.find(e => e.id === extra.id) ? prev.filter(e => e.id !== extra.id) : [...prev, extra]
+                );
+            };
+
+            const addToCart = (item, extras, note) => {
+                const cartItemId = `${item.id}-${extras.map(e => e.id).sort().join('-')}-${note.trim()}`;
+                setCart(prev => {
+                    const existing = prev.find(i => i.cartId === cartItemId);
+                    if (existing) {
+                        return prev.map(i => i.cartId === cartItemId ? { ...i, quantity: i.quantity + 1 } : i);
+                    }
+                    return [...prev, { ...item, extras, note: note.trim(), quantity: 1, cartId: cartItemId }];
+                });
+                setCustomizingItem(null);
+            };
+
+            const updateQuantity = (cartId, delta) => {
+                setCart(prev => {
+                    const existing = prev.find(i => i.cartId === cartId);
+                    if (existing && existing.quantity === 1 && delta === -1) {
+                        return prev.filter(i => i.cartId !== cartId);
+                    }
+                    return prev.map(item => (item.cartId === cartId ? { ...item, quantity: item.quantity + delta } : item));
+                });
+            };
+
+            const total = useMemo(() => cart.reduce((sum, item) => {
+                const extrasTotal = item.extras.reduce((s, e) => s + e.price, 0);
+                return sum + ((item.price + extrasTotal) * item.quantity);
+            }, 0), [cart]);
+
+            const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+
+            const whatsappUrl = useMemo(() => {
+                if (cart.length === 0) return "#";
+                let text = `*🍔 NUEVO PEDIDO - DOGGI'S*\n`;
+                text += `_Imposible no repetir_\n`;
+                text += `---------------------------\n`;
+                cart.forEach(item => {
+                    const itemTotal = (item.price + item.extras.reduce((s, e) => s + e.price, 0)) * item.quantity;
+                    text += `• *${item.quantity}x* ${item.name}\n`;
+                    if (item.extras.length > 0) text += `   _Extras: ${item.extras.map(e => e.name).join(', ')}_\n`;
+                    if (item.note) text += `   _Nota: "${item.note}"_\n`;
+                    text += `   Subtotal: $${itemTotal.toLocaleString()}\n`;
+                });
+                text += `---------------------------\n`;
+                text += `*TOTAL A PAGAR: $${total.toLocaleString()}*\n\n`;
+                text += `📍 _Dirección:_ [Ingresar aquí]`;
+                return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+            }, [cart, total]);
+
+            return (
+                <div className="min-h-screen">
+                    {/* Top Bar */}
+                    <div className="bg-zinc-900 text-white text-[10px] uppercase font-bold tracking-[0.2em] py-2 text-center border-b-2 border-red-600">
+                        ¡Imposible No Repetir! • Doggi's Hot Food
+                    </div>
+
+                    {/* Header */}
+                    <header className="bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 py-3 border-b border-slate-200">
+                        <div className="max-w-4xl mx-auto flex justify-between items-center">
+                            <div className="flex flex-col">
+                                <h1 className="text-2xl font-black text-slate-800 leading-none tracking-tighter">DOGGI'S</h1>
+                                <p className="text-[10px] font-bold text-red-600 uppercase tracking-[0.2em] mt-0.5">Hot Food Gourmet</p>
+                            </div>
+                            <button onClick={() => setIsCartOpen(true)} className="relative p-3 bg-zinc-900 rounded-2xl shadow-lg transition-transform active:scale-90">
+                                <Icon name="shopping-cart" className="text-white" />
+                                {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white animate-bounce">{cartCount}</span>}
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="max-w-4xl mx-auto px-4">
+                        {/* Banner Principal */}
+                        <section className="mt-6 relative rounded-[2.5rem] overflow-hidden bg-zinc-900 text-white p-8 shadow-2xl">
+                           <div className="relative z-10">
+                              <span className="inline-block bg-red-600 text-[10px] font-black px-3 py-1 rounded-full mb-4 uppercase tracking-widest">Abierto Ahora</span>
+                              <h2 className="text-3xl font-black italic tracking-tighter mb-2 uppercase leading-tight">¡Ármalo <br/>a tu gusto!</h2>
+                              <p className="text-sm text-slate-400 font-medium italic">Personaliza tu pedido exactamente como prefieras.</p>
+                           </div>
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 rounded-full -mr-10 -mt-10 blur-3xl"></div>
+                        </section>
+
+                        {/* Info Cards */}
+                        <section className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 flex items-start gap-4 shadow-sm">
+                                <div className="bg-red-50 p-2.5 rounded-2xl"><Icon name="clock" className="text-red-600" /></div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Horarios</p>
+                                    <div className="space-y-1 text-xs font-bold text-slate-800">
+                                        <div className="flex justify-between"><span>Mar - Jue:</span><span>4:30 PM - 9:00 PM</span></div>
+                                        <div className="flex justify-between"><span>Vie - Dom:</span><span>4:30 PM - 11:00 PM</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 shadow-sm">
+                                <div className="bg-red-50 p-2.5 rounded-2xl"><Icon name="map-pin" className="text-red-600" /></div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ubicación</p>
+                                    <p className="text-xs font-bold text-slate-800 uppercase italic">Envigado, San Rafael</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Categorías Nav */}
+                        <div className="flex gap-2 overflow-x-auto py-6 no-scrollbar sticky top-[72px] bg-neutral-50/95 backdrop-blur-sm z-30">
+                            {MENU_DATA.map((section) => (
+                                <button
+                                    key={section.category}
+                                    onClick={() => {
+                                        setActiveCategory(section.category);
+                                        const el = document.getElementById(section.category);
+                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }}
+                                    className={`px-6 py-3 rounded-2xl text-[11px] font-black whitespace-nowrap transition-all uppercase tracking-widest border-2 ${
+                                        activeCategory === section.category 
+                                        ? 'bg-red-600 text-white border-red-600 shadow-lg' 
+                                        : 'bg-white text-slate-400 border-slate-100'
+                                    }`}
+                                >
+                                    {section.category}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Listado de Productos */}
+                        <div className="space-y-12 mt-4">
+                            {MENU_DATA.map((section) => (
+                                <section key={section.category} id={section.category} className="scroll-mt-32">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <h3 className="text-xl font-black text-zinc-900 uppercase italic">{section.category}</h3>
+                                        <div className="h-[3px] flex-grow bg-red-600/10 rounded-full"></div>
+                                    </div>
+                                    
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {section.items.map((item) => (
+                                            <div key={item.id} className="bg-white p-5 rounded-[2rem] border-b-4 border-slate-200 flex flex-col justify-between hover:border-red-600 transition-all group">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex-1 pr-4">
+                                                        <h4 className="font-black text-zinc-800 uppercase text-sm group-hover:text-red-600 transition-colors">{item.name}</h4>
+                                                        <p className="text-[11px] text-slate-400 italic font-medium mt-1 leading-relaxed">{item.description}</p>
+                                                    </div>
+                                                    <span className="text-sm font-black text-zinc-900 bg-amber-400 px-3 py-1 rounded-xl shadow-sm italic">
+                                                        ${item.price.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleOpenCustomizer(item, section.category)} 
+                                                    className="w-full bg-zinc-900 hover:bg-red-600 text-white p-4 rounded-2xl transition-all flex items-center justify-center gap-2 font-black text-[11px] uppercase tracking-[0.1em]"
+                                                >
+                                                    <Icon name="plus" size={16} />
+                                                    Agregar
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    </main>
+
+                    {/* Modal de Personalización */}
+                    {customizingItem && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md" onClick={() => setCustomizingItem(null)}></div>
+                            <div className="relative bg-white w-full max-w-lg rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl flex flex-col max-h-[90vh] animate-in slide-in-from-bottom duration-300">
+                                <div className="p-7 border-b border-slate-100 flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase text-zinc-900 leading-tight">{customizingItem.name}</h3>
+                                        <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mt-1">Personaliza tu pedido</p>
+                                    </div>
+                                    <button onClick={() => setCustomizingItem(null)} className="p-2 bg-slate-50 rounded-xl hover:text-red-600 transition-colors">
+                                        <Icon name="x" />
+                                    </button>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto p-7 space-y-8 no-scrollbar">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Icon name="pen-line" size={16} className="text-red-600" />
+                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Indicaciones ✍️</p>
+                                        </div>
+                                        <textarea
+                                            value={specialNote}
+                                            onChange={(e) => setSpecialNote(e.target.value)}
+                                            placeholder="Ej: Sin cebolla, pan bien tostado..."
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-red-600 outline-none italic text-slate-700 min-h-[80px]"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Icon name="plus" size={14} className="text-red-600" />
+                                            <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Adiciones Doggi's 🌭</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {EXTRAS_DATA.map(extra => (
+                                                <button
+                                                    key={extra.id}
+                                                    onClick={() => toggleExtra(extra)}
+                                                    className={`w-full flex justify-between items-center p-4 rounded-2xl border-2 transition-all ${
+                                                        selectedExtras.find(e => e.id === extra.id)
+                                                        ? 'border-red-600 bg-red-50'
+                                                        : 'border-slate-100 bg-white hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                                            selectedExtras.find(e => e.id === extra.id) ? 'bg-red-600 border-red-600' : 'border-slate-300'
+                                                        }`}>
+                                                            {selectedExtras.find(e => e.id === extra.id) && <Icon name="check" size={12} className="text-white" />}
+                                                        </div>
+                                                        <span className="text-sm font-black text-zinc-800 uppercase italic">{extra.name}</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-slate-400">+ ${extra.price.toLocaleString()}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-7 bg-zinc-900">
+                                    <button 
+                                        onClick={() => addToCart(customizingItem, selectedExtras, specialNote)}
+                                        className="w-full bg-red-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl"
+                                    >
+                                        Confirmar • $ {(customizingItem.price + selectedExtras.reduce((s, e) => s + e.price, 0)).toLocaleString()}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Carrito Lateral/Modal */}
+                    {isCartOpen && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                            <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>
+                            <div className="relative bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl flex flex-col max-h-[90vh] animate-in slide-in-from-bottom">
+                                <div className="p-8 flex justify-between items-center border-b border-slate-100">
+                                    <h3 className="text-xl font-black italic uppercase leading-none">Mi Pedido</h3>
+                                    <button onClick={() => setIsCartOpen(false)} className="p-3 bg-slate-100 rounded-2xl"><Icon name="x" /></button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar">
+                                    {cart.length === 0 ? (
+                                        <div className="text-center py-12">
+                                            <Icon name="shopping-cart" size={40} className="mx-auto text-slate-200 mb-4" />
+                                            <p className="text-slate-400 font-black text-xs uppercase italic">Tu carrito está vacío</p>
+                                        </div>
+                                    ) : (
+                                        cart.map((item) => (
+                                            <div key={item.cartId} className="bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <h4 className="font-black text-xs uppercase text-zinc-800">{item.name}</h4>
+                                                        {item.extras.length > 0 && <p className="text-[9px] text-red-600 font-bold italic mt-1 uppercase">Extras: {item.extras.map(e => e.name).join(', ')}</p>}
+                                                        {item.note && <p className="text-[10px] text-slate-500 font-bold italic mt-1 bg-white p-2 rounded-lg">"{item.note}"</p>}
+                                                    </div>
+                                                    <p className="text-zinc-900 font-black text-sm">$ {((item.price + item.extras.reduce((s,e)=>s+e.price,0)) * item.quantity).toLocaleString()}</p>
+                                                </div>
+                                                <div className="flex justify-center mt-3">
+                                                    <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-2 gap-3 shadow-sm">
+                                                        <button onClick={() => updateQuantity(item.cartId, -1)} className="p-2"><Icon name="minus" size={14} /></button>
+                                                        <span className="font-black text-sm">{item.quantity}</span>
+                                                        <button onClick={() => updateQuantity(item.cartId, 1)} className="p-2"><Icon name="plus" size={14} /></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                <div className="p-8 bg-zinc-900 text-white">
+                                    <div className="flex justify-between items-end mb-6">
+                                        <div>
+                                            <p className="text-zinc-500 font-black text-[10px] uppercase tracking-widest">Total</p>
+                                            <p className="text-3xl font-black italic leading-none">$ {total.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={`w-full bg-[#25D366] text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 uppercase tracking-widest text-sm ${cart.length === 0 ? 'opacity-50 pointer-events-none' : 'hover:scale-[1.02] transition-all'}`}>
+                                        <Icon name="message-circle" fill="white" /> Enviar por WhatsApp
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Footer con Logo */}
+                    <footer className="mt-20 py-16 px-6 bg-zinc-900 text-white text-center rounded-t-[4rem]">
+                        <div className="mb-6 flex justify-center">
+                            <img 
+                                src={LOGO_URL} 
+                                alt="Logo Doggi's" 
+                                className="w-40 h-40 object-contain animate-float" 
+                            />
+                        </div>
+                        <p className="text-lg font-black italic uppercase tracking-tighter">Imposible no repetir</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mt-2 mb-8">Envigado, San Rafael</p>
+                        <div className="w-12 h-1 bg-red-600 mx-auto rounded-full opacity-50"></div>
+                    </footer>
+
+                    {/* Botón Flotante de Compra */}
+                    {cartCount > 0 && !isCartOpen && (
+                        <div className="fixed bottom-6 left-4 right-4 z-40">
+                            <button onClick={() => setIsCartOpen(true)} className="w-full bg-red-600 text-white font-black py-5 rounded-[2rem] shadow-2xl flex justify-between items-center px-8 border-4 border-white active:scale-95 transition-all animate-in fade-in slide-in-from-bottom-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-white text-red-600 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black">{cartCount}</div>
+                                    <span className="italic uppercase text-sm font-black">Ver Pedido</span>
+                                </div>
+                                <span className="font-black text-xl italic">$ {total.toLocaleString()}</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
